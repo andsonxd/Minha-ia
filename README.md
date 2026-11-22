@@ -1,2 +1,0 @@
-# Minha-ia
-Minha ia
