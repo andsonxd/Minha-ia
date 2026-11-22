@@ -1,9 +1,8 @@
-
 from fastapi import FastAPI
 from datetime import datetime
 
 app = FastAPI(
-    title="Xiubala AI",
+    title="Jarvis AI",
     description="Assistente pessoal inteligente",
     version="1.0.0"
 )
@@ -11,9 +10,9 @@ app = FastAPI(
 @app.get("/")
 def read_root():
     return {
-        "nome": "Xiubala",
+        "nome": "Jarvis",
         "status": "online",
-        "mensagem": "Olá! Sou a Xiubala. Como posso ajudar?",
+        "mensagem": "Olá! Sou a Jarvisa. Como posso ajudar?",
         "horario": datetime.now().strftime("%H:%M:%S")
     }
 
@@ -21,6 +20,6 @@ def read_root():
 def status():
     return {
         "online": True,
-        "assistente": "Xiubala",
+        "assistente": "Jarvis",
         "versao": "1.0.0"
     }
