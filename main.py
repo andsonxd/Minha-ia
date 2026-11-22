@@ -60,8 +60,10 @@ def conversar(dados: Mensagem):
             "status": "sucesso"
         }
 
-    except APIError:
-        raise HTTPException(
-            status_code=502,
-            detail="Erro ao consultar a inteligência artificial."
-        )
+except APIError as e:
+    print("ERRO OPENAI:", str(e))
+
+    raise HTTPException(
+        status_code=502,
+        detail=f"Erro OpenAI: {e.message}"
+    )
