@@ -3,12 +3,12 @@ from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from openai import OpenAI
+from google import genai
 
 app = FastAPI(
     title="Jarvis AI",
     description="Assistente pessoal inteligente",
-    version="2.0.0"
+    version="3.0.0"
 )
 
 class Mensagem(BaseModel):
@@ -28,41 +28,43 @@ def status():
     return {
         "online": True,
         "assistente": "Jarvis",
-        "versao": "2.0.0"
+        "versao": "3.0.0"
     }
 
 @app.post("/chat")
 def conversar(dados: Mensagem):
 
-    if not os.getenv("OPENAI_API_KEY"):
+    chave = os.getenv("GEMINI_API_KEY")
+
+    if not chave:
         raise HTTPException(
             status_code=503,
-            detail="Chave da OpenAI não configurada."
+            detail="Chave do Gemini não configurada."
         )
 
     try:
-        client = OpenAI()
+        client = genai.Client(api_key=chave)
 
-        resposta = client.responses.create(
-            model="gpt-4o-mini",
-            instructions=(
+        resposta = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=(
                 "Você é JARVIS, um assistente pessoal inteligente. "
-                "Responda em português brasileiro, de forma "
-                "educada, clara e prestativa."
-            ),
-            input=dados.mensagem
+                "Responda em português brasileiro, de forma educada, "
+                "clara e prestativa.\n\n"
+                f"Usuário: {dados.mensagem}"
+            )
         )
 
         return {
             "assistente": "Jarvis",
-            "resposta": resposta.output_text,
+            "resposta": resposta.text,
             "status": "sucesso"
         }
 
     except Exception as e:
-        print("ERRO REAL DO JARVIS:", repr(e))
+        print("ERRO REAL DO GEMINI:", repr(e))
 
         raise HTTPException(
             status_code=502,
-            detail=f"Erro interno: {type(e).__name__}"
+            detail=f"Erro Gemini: {type(e).__name__}"
         )
