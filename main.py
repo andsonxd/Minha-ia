@@ -1,10 +1,9 @@
-
 import os
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from openai import OpenAI, APIError
+from openai import OpenAI
 
 app = FastAPI(
     title="Jarvis AI",
@@ -60,10 +59,10 @@ def conversar(dados: Mensagem):
             "status": "sucesso"
         }
 
-except Exception as e:
-    print("ERRO REAL DO JARVIS:", repr(e))
+    except Exception as e:
+        print("ERRO REAL DO JARVIS:", repr(e))
 
-    raise HTTPException(
-        status_code=502,
-        detail=f"Erro interno: {type(e).__name__}"
-    )
+        raise HTTPException(
+            status_code=502,
+            detail=f"Erro interno: {type(e).__name__}"
+        )
