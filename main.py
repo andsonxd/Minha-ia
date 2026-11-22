@@ -60,10 +60,10 @@ def conversar(dados: Mensagem):
             "status": "sucesso"
         }
 
-except APIError as e:
-    print("ERRO OPENAI:", str(e))
+except Exception as e:
+    print("ERRO REAL DO JARVIS:", repr(e))
 
     raise HTTPException(
         status_code=502,
-        detail=f"Erro OpenAI: {e.message}"
+        detail=f"Erro interno: {type(e).__name__}"
     )
