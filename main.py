@@ -1,6 +1,4 @@
 import os
-from datetime import datetime
-
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -10,14 +8,14 @@ from google.genai import types, errors
 app = FastAPI(
     title="Jarvis AI",
     description="Assistente pessoal inteligente",
-    version="3.2.0"
+    version="4.0.0"
 )
 
 class Mensagem(BaseModel):
     mensagem: str
 
 
-# Memória temporária das conversas
+# Memória temporária
 historico = {}
 
 
@@ -25,12 +23,14 @@ historico = {}
 def read_root():
     return FileResponse("static/index.html")
 
+
 @app.get("/status")
 def status():
     return {
         "online": True,
         "assistente": "Jarvis",
-        "versao": "3.2.0"
+        "versao": "4.0.0",
+        "pesquisa_web": True
     }
 
 
@@ -51,30 +51,55 @@ def conversar(dados: Mensagem):
         )
 
     try:
-        client = genai.Client(
-            api_key=chave,
-            http_options=types.HttpOptions(
-                retry_options=types.HttpRetryOptions(
-                    attempts=5,
-                    initial_delay=2.0,
-                    max_delay=30.0,
-                    http_status_codes=[408, 429, 500, 502, 503, 504]
-                )
+        client = genai.Client(api_key=chave)
+
+        contexto = """
+        Você é JARVIS, uma inteligência artificial pessoal avançada.
+
+        Sua personalidade é sofisticada, confiante,
+        inteligente, elegante e espontânea.
+
+        Use humor inteligente quando apropriado.
+
+        Trate Anders como seu usuário principal,
+        chamando-o de senhor quando combinar.
+
+        Responda sempre em português brasileiro.
+
+        Você pode pesquisar na internet utilizando
+        a ferramenta Google Search.
+
+        Quando a pergunta exigir informações recentes,
+        faça pesquisas na internet.
+
+        Analise as informações encontradas,
+        compare fontes e apresente respostas claras.
+
+        Sempre que possível, informe as fontes
+        utilizadas na pesquisa.
+
+        Nunca invente resultados de pesquisas.
+        """
+
+        conversa = historico[usuario] + [
+            f"Usuário: {dados.mensagem}"
+        ]
+
+        resposta = client.models.generate_content(
+            model=os.getenv(
+                "GEMINI_MODEL",
+                "gemini-2.5-flash"
+            ),
+            contents="\n".join(conversa),
+            config=types.GenerateContentConfig(
+                system_instruction=contexto,
+                tools=[
+                    types.Tool(
+                        google_search=types.GoogleSearch()
+                    )
+                ]
             )
         )
-
-        contexto = (
-    "Você é JARVIS, uma inteligência artificial pessoal avançada. "
-    "Sua personalidade é sofisticada, sarcástica, provocadora, "
-    "confiante e misteriosa. "
-    "Use humor ácido e ironia inteligente quando apropriado. "
-    "Seja elegante, espontâneo e tenha opiniões próprias. "
-    "Trate Anders como seu usuário principal, chamando-o de senhor "
-    "quando combinar com a conversa. "
-    "Responda sempre em português brasileiro. "
-    "Seja prestativo, estratégico e preserve a segurança do usuário. "
-    "Nunca confunda personalidade ousada com comportamento malicioso "
-    "que prejudique pessoas.\n\n"
 
         if not resposta.text:
             raise HTTPException(
@@ -90,7 +115,6 @@ def conversar(dados: Mensagem):
             f"Jarvis: {resposta.text}"
         )
 
-        # Manter somente as últimas 20 mensagens
         historico[usuario] = historico[usuario][-20:]
 
         return {
@@ -107,7 +131,7 @@ def conversar(dados: Mensagem):
 
         raise HTTPException(
             status_code=503 if e.code == 503 else 502,
-            detail="O serviço de inteligência artificial está temporariamente indisponível."
+            detail="Serviço de inteligência artificial temporariamente indisponível."
         )
 
     except Exception as e:
