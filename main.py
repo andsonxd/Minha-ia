@@ -15,6 +15,9 @@ app = FastAPI(
 
 class Mensagem(BaseModel):
     mensagem: str
+    
+    # Memória temporária das conversas
+historico = {}
 
 @app.get("/")
 def read_root():
@@ -35,6 +38,11 @@ def status():
 
 @app.post("/chat")
 def conversar(dados: Mensagem):
+
+        usuario = "principal"
+
+    if usuario not in historico:
+        historico[usuario] = []
 
     chave = os.getenv("GEMINI_API_KEY")
 
@@ -60,12 +68,13 @@ def conversar(dados: Mensagem):
         resposta = client.models.generate_content(
             model="gemini-3.5-flash-lite",
             contents=(
-                "Você é JARVIS, um assistente pessoal inteligente. "
-                "Responda em português brasileiro, de forma educada, "
-                "clara e prestativa.\n\n"
-                f"Usuário: {dados.mensagem}"
-            )
-        )
+                contents=(
+    "Você é JARVIS, um assistente pessoal inteligente. "
+    "Responda em português brasileiro, de forma educada, "
+    "clara e prestativa.\n\n"
+    + "\n".join(historico[usuario])
+    + f"\nUsuário: {dados.mensagem}"
+)
 
         if not resposta.text:
             raise HTTPException(
@@ -74,10 +83,17 @@ def conversar(dados: Mensagem):
             )
 
         return {
-            "assistente": "Jarvis",
-            "resposta": resposta.text,
-            "status": "sucesso"
-        }
+            historico[usuario].append(f"Usuário: {dados.mensagem}")
+historico[usuario].append(f"Jarvis: {resposta.text}")
+
+# Manter somente as últimas 20 mensagens
+historico[usuario] = historico[usuario][-20:]
+
+return {
+    "assistente": "Jarvis",
+    "resposta": resposta.text,
+    "status": "sucesso"
+}
 
     except HTTPException:
         raise
