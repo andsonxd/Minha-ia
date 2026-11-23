@@ -58,7 +58,7 @@ def conversar(dados: Mensagem):
         )
 
         resposta = client.models.generate_content(
-            model="gemini-3.8-flash",
+            model="gemini-3.5-flash-lite",
             contents=(
                 "Você é JARVIS, um assistente pessoal inteligente. "
                 "Responda em português brasileiro, de forma educada, "
