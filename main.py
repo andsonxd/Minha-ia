@@ -1,4 +1,3 @@
-
 import os
 from datetime import datetime
 
@@ -10,14 +9,16 @@ from google.genai import types, errors
 app = FastAPI(
     title="Jarvis AI",
     description="Assistente pessoal inteligente",
-    version="3.1.0"
+    version="3.2.0"
 )
 
 class Mensagem(BaseModel):
     mensagem: str
-    
-    # Memória temporária das conversas
+
+
+# Memória temporária das conversas
 historico = {}
+
 
 @app.get("/")
 def read_root():
@@ -28,18 +29,20 @@ def read_root():
         "horario": datetime.now().strftime("%H:%M:%S")
     }
 
+
 @app.get("/status")
 def status():
     return {
         "online": True,
         "assistente": "Jarvis",
-        "versao": "3.1.0"
+        "versao": "3.2.0"
     }
+
 
 @app.post("/chat")
 def conversar(dados: Mensagem):
 
-        usuario = "principal"
+    usuario = "principal"
 
     if usuario not in historico:
         historico[usuario] = []
@@ -65,16 +68,18 @@ def conversar(dados: Mensagem):
             )
         )
 
+        contexto = (
+            "Você é JARVIS, um assistente pessoal inteligente. "
+            "Responda em português brasileiro, de forma educada, "
+            "clara e prestativa.\n\n"
+            + "\n".join(historico[usuario])
+            + f"\nUsuário: {dados.mensagem}"
+        )
+
         resposta = client.models.generate_content(
             model="gemini-3.5-flash-lite",
-            contents=(
-                contents=(
-    "Você é JARVIS, um assistente pessoal inteligente. "
-    "Responda em português brasileiro, de forma educada, "
-    "clara e prestativa.\n\n"
-    + "\n".join(historico[usuario])
-    + f"\nUsuário: {dados.mensagem}"
-)
+            contents=contexto
+        )
 
         if not resposta.text:
             raise HTTPException(
@@ -82,18 +87,22 @@ def conversar(dados: Mensagem):
                 detail="O Gemini não retornou uma resposta."
             )
 
+        historico[usuario].append(
+            f"Usuário: {dados.mensagem}"
+        )
+
+        historico[usuario].append(
+            f"Jarvis: {resposta.text}"
+        )
+
+        # Manter somente as últimas 20 mensagens
+        historico[usuario] = historico[usuario][-20:]
+
         return {
-            historico[usuario].append(f"Usuário: {dados.mensagem}")
-historico[usuario].append(f"Jarvis: {resposta.text}")
-
-# Manter somente as últimas 20 mensagens
-historico[usuario] = historico[usuario][-20:]
-
-return {
-    "assistente": "Jarvis",
-    "resposta": resposta.text,
-    "status": "sucesso"
-}
+            "assistente": "Jarvis",
+            "resposta": resposta.text,
+            "status": "sucesso"
+        }
 
     except HTTPException:
         raise
