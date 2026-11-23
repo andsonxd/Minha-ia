@@ -1,0 +1,344 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS - Assistente Pessoal</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #080d18;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #182b45;
+        }
+
+        header h1 {
+            color: #42c8ff;
+            letter-spacing: 4px;
+        }
+
+        .status {
+            color: #42e6a4;
+            font-size: 13px;
+        }
+
+        main {
+            flex: 1;
+            width: 100%;
+            max-width: 800px;
+            margin: auto;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .orb {
+            width: 155px;
+            height: 155px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #53d8ff, #1260a5 45%, #08162b 75%);
+            box-shadow: 0 0 35px #168bff, 0 0 80px #0755a8;
+            margin: 35px 0;
+            animation: pulse 3s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 35px #168bff;
+            }
+            50% {
+                transform: scale(1.08);
+                box-shadow: 0 0 65px #168bff;
+            }
+        }
+
+        .welcome {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .welcome h2 {
+            font-size: 25px;
+            margin-bottom: 10px;
+        }
+
+        .welcome p {
+            color: #91a9c5;
+        }
+
+        #chat {
+            width: 100%;
+            min-height: 180px;
+            max-height: 350px;
+            overflow-y: auto;
+            padding: 18px;
+            border: 1px solid #1d3858;
+            border-radius: 15px;
+            background: #0d1728;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .user {
+            color: #55caff;
+        }
+
+        .jarvis {
+            color: #ffffff;
+        }
+
+        .controls {
+            width: 100%;
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #25486b;
+            background: #101e32;
+            color: white;
+            outline: none;
+        }
+
+        button {
+            padding: 14px 18px;
+            border: none;
+            border-radius: 12px;
+            background: #087fc4;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #159eea;
+        }
+
+        .mic {
+            background: #173b60;
+        }
+
+        footer {
+            padding: 18px;
+            text-align: center;
+            color: #637d9c;
+            font-size: 12px;
+        }
+
+        @media (max-width: 480px) {
+            .controls {
+                flex-wrap: wrap;
+            }
+
+            .controls input {
+                flex-basis: 100%;
+            }
+
+            button {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>JARVIS</h1>
+        <span class="status">● ONLINE</span>
+    </header>
+
+    <main>
+        <div class="orb"></div>
+
+        <div class="welcome">
+            <h2>Olá, Anders.</h2>
+            <p>Sou o JARVIS. Como posso ajudar hoje?</p>
+        </div>
+
+        <div id="chat">
+            <div class="message jarvis">
+                JARVIS: Todos os sistemas operacionais.
+                Estou à sua disposição, senhor.
+            </div>
+        </div>
+
+        <div class="controls">
+            <input
+                id="mensagem"
+                type="text"
+                placeholder="Digite sua mensagem..."
+            >
+
+            <button onclick="enviarMensagem()">Enviar</button>
+
+            <button class="mic" onclick="falar()">
+                🎤
+            </button>
+        </div>
+    </main>
+
+    <footer>
+        JARVIS AI • Assistente Pessoal Inteligente
+    </footer>
+
+    <script>
+        const API = window.location.origin;
+
+        async function enviarMensagem() {
+            const campo = document.getElementById("mensagem");
+            const chat = document.getElementById("chat");
+            const mensagem = campo.value.trim();
+
+            if (!mensagem) return;
+
+            chat.innerHTML +=
+                `<div class="message user">Você: ${escapar(mensagem)}</div>`;
+
+            campo.value = "";
+
+            const carregando = document.createElement("div");
+            carregando.className = "message jarvis";
+            carregando.textContent = "JARVIS: Processando...";
+            chat.appendChild(carregando);
+
+            try {
+                const resposta = await fetch(API + "/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        mensagem: mensagem
+                    })
+                });
+
+                const dados = await resposta.json();
+                carregando.remove();
+
+                if (!resposta.ok) {
+                    throw new Error(dados.detail || "Erro no servidor");
+                }
+
+                adicionarResposta(dados.resposta);
+
+            } catch (erro) {
+                carregando.textContent =
+                    "JARVIS: Não consegui conectar ao servidor. " + erro.message;
+            }
+
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function adicionarResposta(texto) {
+            const chat = document.getElementById("chat");
+            const resposta = document.createElement("div");
+
+            resposta.className = "message jarvis";
+            resposta.textContent = "JARVIS: " + texto;
+
+            chat.appendChild(resposta);
+            chat.scrollTop = chat.scrollHeight;
+
+            falarTexto(texto);
+        }
+
+        function escapar(texto) {
+            return texto.replace(/[&<>"']/g, letra => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            })[letra]);
+        }
+
+        function falarTexto(texto) {
+            if (!("speechSynthesis" in window)) return;
+
+            window.speechSynthesis.cancel();
+
+            const fala = new SpeechSynthesisUtterance(texto);
+            fala.lang = "pt-BR";
+            fala.rate = 1;
+            fala.pitch = 1.05;
+
+            const vozes = window.speechSynthesis.getVoices();
+
+            const vozFeminina = vozes.find(voz =>
+                voz.lang.toLowerCase().startsWith("pt") &&
+                /female|feminina/i.test(voz.name)
+            );
+
+            if (vozFeminina) {
+                fala.voice = vozFeminina;
+            }
+
+            window.speechSynthesis.speak(fala);
+        }
+
+        function falar() {
+            const Reconhecimento =
+                window.SpeechRecognition ||
+                window.webkitSpeechRecognition;
+
+            if (!Reconhecimento) {
+                alert("O reconhecimento de voz não está disponível neste navegador.");
+                return;
+            }
+
+            const reconhecimento = new Reconhecimento();
+            reconhecimento.lang = "pt-BR";
+            reconhecimento.start();
+
+            reconhecimento.onresult = evento => {
+                document.getElementById("mensagem").value =
+                    evento.results[0][0].transcript;
+
+                enviarMensagem();
+            };
+
+            reconhecimento.onerror = () => {
+                alert("Não consegui reconhecer sua voz. Tente novamente.");
+            };
+        }
+
+        document.getElementById("mensagem").addEventListener(
+            "keydown",
+            evento => {
+                if (evento.key === "Enter") enviarMensagem();
+            }
+        );
+    </script>
+
+</body>
+</html>
