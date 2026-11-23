@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from google import genai
 from google.genai import types, errors
@@ -22,13 +23,7 @@ historico = {}
 
 @app.get("/")
 def read_root():
-    return {
-        "nome": "Jarvis",
-        "status": "online",
-        "mensagem": "Olá! Sou o Jarvis. Como posso ajudar?",
-        "horario": datetime.now().strftime("%H:%M:%S")
-    }
-
+    return FileResponse("static/index.html")
 
 @app.get("/status")
 def status():
