@@ -1,3 +1,4 @@
+0
 
 import os
 import json
@@ -7,8 +8,6 @@ import urllib.error
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from google import genai
-from google.genai import types, errors
 
 app = FastAPI(
     title="Jarvis AI",
@@ -37,7 +36,7 @@ def status():
         "assistente": "Jarvis",
         "versao": "4.0.0",
         "motor_principal": "Gemma 4",
-        "motor_reserva": "Gemini",
+        "motor_reserva": None,
         "gemma_configurado": bool(os.getenv("GEMMA_API_URL")),
         "pesquisa_web": True
     }
@@ -125,38 +124,6 @@ def consultar_gemma(conversa):
     return texto
 
 
-def consultar_gemini(conversa):
-    chave = os.getenv("GEMINI_API_KEY")
-
-    if not chave:
-        raise RuntimeError("Gemini não configurado.")
-
-    modelo = os.getenv(
-        "GEMINI_MODEL",
-        "gemini-3.8-flash"
-    )
-
-    client = genai.Client(api_key=chave)
-
-    resposta = client.models.generate_content(
-        model=modelo,
-        contents="\n".join(conversa),
-        config=types.GenerateContentConfig(
-            system_instruction=contexto_jarvis(),
-            tools=[
-                types.Tool(
-                    google_search=types.GoogleSearch()
-                )
-            ]
-        )
-    )
-
-    if not resposta.text:
-        raise RuntimeError("Gemini retornou resposta vazia.")
-
-    return resposta.text
-
-
 @app.post("/chat")
 def conversar(dados: Mensagem):
 
@@ -170,28 +137,18 @@ def conversar(dados: Mensagem):
     ]
 
     resposta_texto = None
-    motor_utilizado = None
 
-    # Primeiro: tenta Gemma 4
+    # Motor único: Gemma 4
     try:
         resposta_texto = consultar_gemma(conversa)
-        motor_utilizado = "Gemma 4"
 
     except Exception as e:
         print("ERRO GEMMA:", repr(e))
 
-        # Segundo: tenta Gemini como reserva
-        try:
-            resposta_texto = consultar_gemini(conversa)
-            motor_utilizado = "Gemini"
-
-        except Exception as erro:
-            print("ERRO GEMINI:", repr(erro))
-
-            raise HTTPException(
-                status_code=503,
-                detail="Os motores de inteligência estão temporariamente indisponíveis."
-            )
+        raise HTTPException(
+            status_code=503,
+            detail="O motor Gemma 4 está temporariamente indisponível."
+        )
 
     # Atualiza o histórico somente após resposta válida
     historico[usuario].append(
@@ -208,5 +165,5 @@ def conversar(dados: Mensagem):
         "assistente": "Jarvis",
         "resposta": resposta_texto,
         "status": "sucesso",
-        "motor": motor_utilizado
+        "motor": "Gemma 4"
     }
