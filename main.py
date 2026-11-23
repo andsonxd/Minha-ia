@@ -1,3 +1,4 @@
+
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -10,6 +11,7 @@ app = FastAPI(
     description="Assistente pessoal inteligente",
     version="4.0.0"
 )
+
 
 class Mensagem(BaseModel):
     mensagem: str
@@ -50,6 +52,12 @@ def conversar(dados: Mensagem):
             detail="Chave do Gemini não configurada."
         )
 
+    # Modelo configurável pelo Render
+    modelo = os.getenv(
+        "GEMINI_MODEL",
+        "gemini-3.8-flash"
+    )
+
     try:
         client = genai.Client(api_key=chave)
 
@@ -86,10 +94,7 @@ def conversar(dados: Mensagem):
         ]
 
         resposta = client.models.generate_content(
-            model=os.getenv(
-                "GEMINI_MODEL",
-                model="gemini-3.8-flash",
-            ),
+            model=modelo,
             contents="\n".join(conversa),
             config=types.GenerateContentConfig(
                 system_instruction=contexto,
