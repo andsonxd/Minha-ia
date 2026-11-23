@@ -88,7 +88,7 @@ def conversar(dados: Mensagem):
         resposta = client.models.generate_content(
             model=os.getenv(
                 "GEMINI_MODEL",
-                "model="gemini-3.8-flash",
+                model="gemini-3.8-flash",
             ),
             contents="\n".join(conversa),
             config=types.GenerateContentConfig(
