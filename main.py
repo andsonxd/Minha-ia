@@ -1,14 +1,16 @@
+
 import os
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from google import genai
+from google.genai import types, errors
 
 app = FastAPI(
     title="Jarvis AI",
     description="Assistente pessoal inteligente",
-    version="3.0.0"
+    version="3.1.0"
 )
 
 class Mensagem(BaseModel):
@@ -28,7 +30,7 @@ def status():
     return {
         "online": True,
         "assistente": "Jarvis",
-        "versao": "3.0.0"
+        "versao": "3.1.0"
     }
 
 @app.post("/chat")
@@ -43,7 +45,17 @@ def conversar(dados: Mensagem):
         )
 
     try:
-        client = genai.Client(api_key=chave)
+        client = genai.Client(
+            api_key=chave,
+            http_options=types.HttpOptions(
+                retry_options=types.HttpRetryOptions(
+                    attempts=5,
+                    initial_delay=2.0,
+                    max_delay=30.0,
+                    http_status_codes=[408, 429, 500, 502, 503, 504]
+                )
+            )
+        )
 
         resposta = client.models.generate_content(
             model="gemini-3.8-flash",
@@ -55,16 +67,33 @@ def conversar(dados: Mensagem):
             )
         )
 
+        if not resposta.text:
+            raise HTTPException(
+                status_code=502,
+                detail="O Gemini não retornou uma resposta."
+            )
+
         return {
             "assistente": "Jarvis",
             "resposta": resposta.text,
             "status": "sucesso"
         }
 
+    except HTTPException:
+        raise
+
+    except errors.APIError as e:
+        print("ERRO GEMINI:", repr(e))
+
+        raise HTTPException(
+            status_code=503 if e.code == 503 else 502,
+            detail="O serviço de inteligência artificial está temporariamente indisponível."
+        )
+
     except Exception as e:
-        print("ERRO REAL DO GEMINI:", repr(e))
+        print("ERRO INTERNO:", repr(e))
 
         raise HTTPException(
             status_code=502,
-            detail=f"Erro Gemini: {type(e).__name__}"
+            detail="Erro interno ao processar sua mensagem."
         )
